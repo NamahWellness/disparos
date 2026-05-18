@@ -98,6 +98,103 @@ function Spinner() {
   );
 }
 
+function CleanupTool({ onDone }: { onDone: () => void }) {
+  const { toast } = useToast();
+  const [pattern, setPattern] = useState("");
+  const [preview, setPreview] = useState<{ id: string; name: string; sends: number }[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+
+  const handlePreview = async () => {
+    if (!pattern.trim()) return;
+    setLoading(true);
+    setPreview(null);
+    setConfirm(false);
+    try {
+      const res = await fetch("/api/admin/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pattern: pattern.trim(), dryRun: true }),
+      });
+      const data = await res.json();
+      setPreview(data.campaigns ?? []);
+    } catch { toast.error("Erro ao buscar"); }
+    finally { setLoading(false); }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pattern: pattern.trim() }),
+      });
+      const data = await res.json();
+      toast.success(`${data.deleted} campanha(s) excluída(s)!`);
+      setPreview(null);
+      setPattern("");
+      setConfirm(false);
+      onDone();
+    } catch { toast.error("Erro ao excluir"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="rounded-2xl border border-red-100 bg-red-50/40 p-5">
+      <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Limpeza de campanhas</p>
+      <p className="text-xs text-gray-500 mb-4">Busque campanhas por nome para excluir em lote. Use com cautela — a exclusão apaga todos os disparos vinculados.</p>
+      <div className="flex gap-2">
+        <Input
+          value={pattern}
+          onChange={(e) => { setPattern(e.target.value); setPreview(null); setConfirm(false); }}
+          placeholder="Parte do nome da campanha…"
+          className="flex-1"
+          onKeyDown={(e) => e.key === "Enter" && handlePreview()}
+        />
+        <Button type="button" variant="outline" onClick={handlePreview} loading={loading}>
+          Buscar
+        </Button>
+      </div>
+
+      {preview !== null && (
+        <div className="mt-3 space-y-2">
+          {preview.length === 0 ? (
+            <p className="text-sm text-gray-500">Nenhuma campanha encontrada.</p>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-gray-700">{preview.length} campanha(s) encontrada(s):</p>
+              <div className="max-h-40 overflow-y-auto space-y-1 rounded-lg border border-red-200 bg-white p-2">
+                {preview.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between text-xs text-gray-700 px-1">
+                    <span className="truncate flex-1">{c.name}</span>
+                    <span className="shrink-0 text-gray-400 ml-2">{c.sends} disparo(s)</span>
+                  </div>
+                ))}
+              </div>
+              {!confirm ? (
+                <Button type="button" variant="outline" className="border-red-300 text-red-600 hover:bg-red-50" onClick={() => setConfirm(true)}>
+                  Excluir {preview.length} campanha(s)
+                </Button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-red-700">Confirmar exclusão permanente?</span>
+                  <Button type="button" onClick={handleDelete} loading={loading} className="bg-red-600 hover:bg-red-700 text-white">
+                    Sim, excluir
+                  </Button>
+                  <button type="button" onClick={() => setConfirm(false)} className="text-sm text-gray-500 hover:text-gray-700">
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatCard({
   icon: Icon,
   label,
@@ -611,6 +708,9 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Ferramentas de limpeza */}
+                <CleanupTool onDone={loadStats} />
 
                 {/* Campos configurados */}
                 <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-5">

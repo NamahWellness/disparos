@@ -21,17 +21,18 @@ import {
 } from "@/lib/utils";
 import {
   Plus,
-  Calendar,
   LayoutGrid,
   List,
   ArrowLeft,
   Edit,
-  CheckCircle,
   Send,
-  Clock,
-  AlertTriangle,
+  Copy,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { CampaignForm } from "@/components/campaigns/campaign-form";
+import { useToast } from "@/components/ui/toast";
 
 interface SendData {
   id: string;
@@ -75,12 +76,15 @@ type ViewMode = "list" | "kanban";
 
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { toast } = useToast();
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("list");
   const [showAddSend, setShowAddSend] = useState(false);
   const [editingSend, setEditingSend] = useState<SendData | null>(null);
   const [activeTab, setActiveTab] = useState("sends");
+  const [showEditCampaign, setShowEditCampaign] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/campaigns/${id}`);
@@ -120,6 +124,33 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     load();
   };
 
+  const handleEditCampaign = async (data: object) => {
+    const res = await fetch(`/api/campaigns/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Erro ao salvar");
+    setShowEditCampaign(false);
+    load();
+    toast.success("Campanha salva!");
+  };
+
+  const handleDuplicateCampaign = async () => {
+    const res = await fetch(`/api/campaigns/${id}/duplicate`, { method: "POST" });
+    if (!res.ok) { toast.error("Erro ao duplicar"); return; }
+    const dup = await res.json();
+    toast.success("Campanha duplicada!");
+    router.push(`/campaigns/${dup.id}`);
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!confirm("Tem certeza? Isso apagará todos os disparos da campanha.")) return;
+    await fetch(`/api/campaigns/${id}`, { method: "DELETE" });
+    toast.success("Campanha excluída!");
+    router.push("/campaigns");
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -155,6 +186,18 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                 Voltar
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={() => setShowEditCampaign(true)}>
+              <Edit className="h-4 w-4 mr-1.5" />
+              Editar
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDuplicateCampaign}>
+              <Copy className="h-4 w-4 mr-1.5" />
+              Duplicar
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDeleteCampaign} className="text-red-600 border-red-200 hover:bg-red-50">
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Excluir
+            </Button>
             <Button onClick={() => setShowAddSend(true)}>
               <Plus className="h-4 w-4 mr-1.5" />
               Novo disparo
@@ -319,6 +362,16 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           )}
         </div>
       </div>
+
+      <Modal open={showEditCampaign} onClose={() => setShowEditCampaign(false)} title="Editar campanha" size="lg">
+        {campaign && (
+          <CampaignForm
+            initial={{ ...campaign, tags: (() => { try { return JSON.parse(campaign.tags ?? "[]"); } catch { return []; } })() }}
+            onSave={handleEditCampaign}
+            onCancel={() => setShowEditCampaign(false)}
+          />
+        )}
+      </Modal>
 
       <Modal open={showAddSend} onClose={() => setShowAddSend(false)} title="Novo disparo" size="lg">
         <SendForm campaignId={id} onSave={handleCreateSend} onCancel={() => setShowAddSend(false)} />
