@@ -32,8 +32,8 @@ export async function GET(req: Request) {
       ...(search
         ? {
             OR: [
-              { subject: { contains: search } },
-              { audience: { contains: search } },
+              { subject: { contains: search, mode: "insensitive" } },
+              { audience: { contains: search, mode: "insensitive" } },
             ],
           }
         : {}),

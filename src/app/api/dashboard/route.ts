@@ -32,8 +32,8 @@ export async function GET() {
     db.send.count({ where: { status: "sent" } }),
     db.send.count(),
     db.send.count({ where: { status: "review" } }),
-    db.send.groupBy({ by: ["channel"], _count: true }),
-    db.send.groupBy({ by: ["status"], _count: true }),
+    db.send.groupBy({ by: ["channel"], _count: { _all: true } }),
+    db.send.groupBy({ by: ["status"], _count: { _all: true } }),
     db.send.findMany({
       where: {
         scheduledDate: { gte: today, lte: nextWeek },
@@ -85,8 +85,8 @@ export async function GET() {
     totalSends,
     pendingApproval,
     delayed,
-    byChannel,
-    byStatus,
+    byChannel: byChannel.map((i) => ({ channel: i.channel, _count: i._count._all })),
+    byStatus: byStatus.map((i) => ({ status: i.status, _count: i._count._all })),
     upcomingSends,
     alerts,
     topSends,
