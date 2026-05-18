@@ -71,6 +71,39 @@ function parseRows(ws: XLSX.WorkSheet, sheetName: string) {
   }).filter((r) => r.subject || r.base || r.audience);
 }
 
+export async function GET() {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const wb = XLSX.utils.book_new();
+
+  const sheets = [
+    { name: "E-mails", channel: "email" },
+    { name: "WhatsApp Grupos", channel: "whatsapp_group" },
+    { name: "WhatsApp Individual", channel: "whatsapp" },
+    { name: "SMS", channel: "sms" },
+    { name: "Push", channel: "push" },
+  ];
+
+  const headers = ["BASE/DATA", "DIA", "HORA", "STATUS", "FASE", "ASSUNTO/TEMA", "PÚBLICO/LISTA", "COPY", "ENVIOS", "LEITURA/ABERTURA", "CLIQUES"];
+  const example = ["Lista VIP", "2025-06-01", "10:00", "scheduled", "awareness", "Promoção de Junho", "Todos os clientes", "https://link.com/copy", "", "", ""];
+
+  for (const { name } of sheets) {
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 16) }));
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  }
+
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+  return new Response(buf, {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="modelo_disparos.xlsx"',
+    },
+  });
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,6 +111,9 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file") as File;
   const campaignId = formData.get("campaignId") as string | null;
+  const campaignName = formData.get("campaignName") as string | null;
+  const campaignMetaRaw = formData.get("campaignMeta") as string | null;
+  const campaignMeta = campaignMetaRaw ? JSON.parse(campaignMetaRaw) : null;
   const preview = formData.get("preview") === "true";
 
   if (!file) return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 });
@@ -108,22 +144,33 @@ export async function POST(req: Request) {
     },
   });
 
+  // Resolve campaign ID once — create a single campaign when none is provided
+  let resolvedCampaignId = campaignId || null;
+  if (!resolvedCampaignId) {
+    const name = campaignMeta?.name?.trim() || campaignName?.trim() || file.name.replace(/\.[^/.]+$/, "");
+    const campaign = await db.campaign.create({
+      data: {
+        name,
+        description: campaignMeta?.description || null,
+        product: campaignMeta?.product || null,
+        status: campaignMeta?.status || "active",
+        startDate: campaignMeta?.startDate ? new Date(campaignMeta.startDate) : null,
+        endDate: campaignMeta?.endDate ? new Date(campaignMeta.endDate) : null,
+        color: campaignMeta?.color || "#6366f1",
+        tags: campaignMeta?.tags?.length ? JSON.stringify(campaignMeta.tags) : null,
+        notes: campaignMeta?.notes || null,
+        ownerId: session.user!.id!,
+      },
+    });
+    resolvedCampaignId = campaign.id;
+  }
+
   let ok = 0;
   let errors = 0;
 
   for (const row of allRows) {
     try {
-      let cId = campaignId;
-      if (!cId) {
-        const campaign = await db.campaign.create({
-          data: {
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            status: "active",
-            ownerId: session.user!.id!,
-          },
-        });
-        cId = campaign.id;
-      }
+      const cId = resolvedCampaignId;
 
       const send = await db.send.create({
         data: {
@@ -184,5 +231,5 @@ export async function POST(req: Request) {
     data: { status: "done", rowsOk: ok, rowsError: errors },
   });
 
-  return NextResponse.json({ importFileId: importFile.id, total: allRows.length, ok, errors });
+  return NextResponse.json({ importFileId: importFile.id, campaignId: resolvedCampaignId, total: allRows.length, ok, errors });
 }
