@@ -103,7 +103,8 @@ export function SendForm({ initial, campaignId, onSave, onCancel }: SendFormProp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(
-    !!(initial?.platform || initial?.externalId || initial?.notes)
+    !!(initial?.platform || initial?.externalId || initial?.notes ||
+       initial?.base || initial?.copyOwnerId || initial?.sendOwnerId)
   );
 
   useEffect(() => {
@@ -205,18 +206,11 @@ export function SendForm({ initial, campaignId, onSave, onCancel }: SendFormProp
               onChange={(e) => set("subject", e.target.value)}
               placeholder="Assunto / Tema / Objetivo"
             />
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                value={form.audience ?? ""}
-                onChange={(e) => set("audience", e.target.value)}
-                placeholder="Público / Lista"
-              />
-              <Input
-                value={form.base ?? ""}
-                onChange={(e) => set("base", e.target.value)}
-                placeholder="Base / Tipo (ex: VIP, Automação)"
-              />
-            </div>
+            <Input
+              value={form.audience ?? ""}
+              onChange={(e) => set("audience", e.target.value)}
+              placeholder="Público / Lista (ex: Compradores, Base VIP…)"
+            />
           </div>
         </div>
 
@@ -283,41 +277,15 @@ export function SendForm({ initial, campaignId, onSave, onCancel }: SendFormProp
         {/* ── Copy & Responsáveis ── */}
         <div>
           <SectionLabel>Copy & Responsáveis</SectionLabel>
-          <div className="space-y-3">
-            <div className="relative">
-              <Link2 className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
-              <Input
-                value={form.copyLink ?? ""}
-                onChange={(e) => set("copyLink", e.target.value)}
-                placeholder="Link da copy (Google Docs, Notion…)"
-                type="url"
-                className="pl-9"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative">
-                <User2 className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
-                <Select
-                  value={form.copyOwnerId ?? ""}
-                  onChange={(e) => set("copyOwnerId", e.target.value)}
-                  className="pl-9"
-                >
-                  <option value="">Resp. pela copy</option>
-                  {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </Select>
-              </div>
-              <div className="relative">
-                <Send className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
-                <Select
-                  value={form.sendOwnerId ?? ""}
-                  onChange={(e) => set("sendOwnerId", e.target.value)}
-                  className="pl-9"
-                >
-                  <option value="">Resp. pelo disparo</option>
-                  {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </Select>
-              </div>
-            </div>
+          <div className="relative">
+            <Link2 className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Input
+              value={form.copyLink ?? ""}
+              onChange={(e) => set("copyLink", e.target.value)}
+              placeholder="Link da copy (Google Docs, Notion…)"
+              type="url"
+              className="pl-9"
+            />
           </div>
         </div>
 
@@ -329,10 +297,39 @@ export function SendForm({ initial, campaignId, onSave, onCancel }: SendFormProp
             className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
           >
             {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            {showAdvanced ? "Ocultar campos avançados" : "Campos avançados (plataforma, ID externo, notas)"}
+            {showAdvanced ? "Ocultar campos avançados" : "Campos avançados (base, responsáveis, plataforma…)"}
           </button>
           {showAdvanced && (
             <div className="mt-3 space-y-3">
+              <Input
+                value={form.base ?? ""}
+                onChange={(e) => set("base", e.target.value)}
+                placeholder="Base / Tipo (ex: VIP, Automação)"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <User2 className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Select
+                    value={form.copyOwnerId ?? ""}
+                    onChange={(e) => set("copyOwnerId", e.target.value)}
+                    className="pl-9"
+                  >
+                    <option value="">Resp. pela copy</option>
+                    {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </Select>
+                </div>
+                <div className="relative">
+                  <Send className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <Select
+                    value={form.sendOwnerId ?? ""}
+                    onChange={(e) => set("sendOwnerId", e.target.value)}
+                    className="pl-9"
+                  >
+                    <option value="">Resp. pelo disparo</option>
+                    {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </Select>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Select value={form.platform ?? ""} onChange={(e) => set("platform", e.target.value)}>
                   <option value="">Plataforma de envio</option>
