@@ -16,13 +16,14 @@ import {
   STATUS_COLORS,
   CHANNEL_LABELS,
   CHANNEL_COLORS,
+  PHASE_LABELS,
   formatDate,
-  formatDateTime,
 } from "@/lib/utils";
 import {
   Plus,
   LayoutGrid,
   List,
+  Table,
   ArrowLeft,
   Edit,
   Send,
@@ -72,7 +73,7 @@ interface CampaignDetail {
   _count: { sends: number };
 }
 
-type ViewMode = "list" | "kanban";
+type ViewMode = "list" | "kanban" | "table";
 
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -313,14 +314,23 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                   <button
                     onClick={() => setView("list")}
                     className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${view === "list" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-600"}`}
+                    title="Lista"
                   >
                     <List className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setView("kanban")}
                     className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${view === "kanban" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-600"}`}
+                    title="Kanban"
                   >
                     <LayoutGrid className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setView("table")}
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${view === "table" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-600"}`}
+                    title="Tabela"
+                  >
+                    <Table className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -338,6 +348,54 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               ) : view === "kanban" ? (
                 <Kanban sends={campaign.sends} onClickSend={setEditingSend} />
+              ) : view === "table" ? (
+                <div className="overflow-auto rounded-xl border border-gray-200 bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50">
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Assunto</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Canal</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Fase</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Data</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Público</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Enviados</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Cliques</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">CTR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaign.sends.map((send) => (
+                        <tr
+                          key={send.id}
+                          onClick={() => setEditingSend(send)}
+                          className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <td className="px-4 py-2.5 font-medium text-gray-900 max-w-xs truncate">{send.subject ?? "-"}</td>
+                          <td className="px-4 py-2.5">
+                            <Badge className={CHANNEL_COLORS[send.channel]}>{CHANNEL_LABELS[send.channel]}</Badge>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <Badge className={STATUS_COLORS[send.status]}>{STATUS_LABELS[send.status]}</Badge>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500">
+                            {send.phase ? (PHASE_LABELS[send.phase] ?? send.phase) : "-"}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                            {send.scheduledDate ? formatDate(send.scheduledDate) : "-"}
+                            {send.scheduledTime && ` ${send.scheduledTime}`}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[160px] truncate">{send.audience ?? "-"}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-700">{send.metrics?.sent?.toLocaleString() ?? "-"}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-700">{send.metrics?.clicks?.toLocaleString() ?? "-"}</td>
+                          <td className="px-4 py-2.5 text-xs font-medium text-green-600">
+                            {send.metrics?.clickRate != null ? `${(send.metrics.clickRate * 100).toFixed(1)}%` : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                   {campaign.sends.map((send) => (
