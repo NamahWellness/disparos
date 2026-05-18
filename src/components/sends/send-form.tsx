@@ -83,10 +83,14 @@ export function SendForm({ initial, campaignId, onSave, onCancel }: SendFormProp
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/users").then((r) => r.json()).then(setUsers).catch(() => {});
-    if (!campaignId) {
-      fetch("/api/campaigns").then((r) => r.json()).then(setCampaigns).catch(() => {});
-    }
+    const fetches: [Promise<User[]>, Promise<Campaign[]>] = [
+      fetch("/api/users").then((r) => r.json()).catch(() => []),
+      campaignId ? Promise.resolve([]) : fetch("/api/campaigns").then((r) => r.json()).catch(() => []),
+    ];
+    Promise.all(fetches).then(([u, c]) => {
+      setUsers(u);
+      setCampaigns(c);
+    });
   }, [campaignId]);
 
   const set = (key: keyof SendFormData, value: string) => setForm((f) => ({ ...f, [key]: value }));

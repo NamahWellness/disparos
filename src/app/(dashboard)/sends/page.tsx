@@ -46,6 +46,7 @@ export default function SendsPage() {
   const [sends, setSends] = useState<Send[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [channel, setChannel] = useState("");
   const [status, setStatus] = useState("");
   const [phase, setPhase] = useState("");
@@ -55,9 +56,14 @@ export default function SendsPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
 
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
   const load = useCallback(async () => {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     if (channel) params.set("channel", channel);
     if (status) params.set("status", status);
     if (phase) params.set("phase", phase);
@@ -65,7 +71,7 @@ export default function SendsPage() {
     const data = await res.json();
     setSends(Array.isArray(data) ? data : []);
     setLoading(false);
-  }, [search, channel, status, phase]);
+  }, [debouncedSearch, channel, status, phase]);
 
   useEffect(() => { load(); }, [load]);
 

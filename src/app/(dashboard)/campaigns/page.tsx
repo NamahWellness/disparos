@@ -35,20 +35,26 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
   const load = useCallback(async () => {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     if (statusFilter) params.set("status", statusFilter);
     const res = await fetch(`/api/campaigns?${params}`);
     const data = await res.json();
     setCampaigns(Array.isArray(data) ? data : []);
     setLoading(false);
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -86,7 +92,7 @@ export default function CampaignsPage() {
     load();
   };
 
-  const tags = (c: Campaign) => {
+  const parseTags = (c: Campaign): string[] => {
     try { return JSON.parse(c.tags ?? "[]") as string[]; }
     catch { return []; }
   };
@@ -141,7 +147,9 @@ export default function CampaignsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {campaigns.map((c) => (
+            {campaigns.map((c) => {
+              const campaignTags = parseTags(c);
+              return (
               <div
                 key={c.id}
                 className="relative rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all overflow-hidden"
@@ -212,9 +220,9 @@ export default function CampaignsPage() {
                     <span className="text-xs text-gray-500">{c._count.sends} disparos</span>
                   </div>
 
-                  {tags(c).length > 0 && (
+                  {campaignTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {tags(c).slice(0, 3).map((tag) => (
+                      {campaignTags.slice(0, 3).map((tag) => (
                         <span key={tag} className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
                           {tag}
                         </span>
@@ -231,7 +239,8 @@ export default function CampaignsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -245,7 +254,7 @@ export default function CampaignsPage() {
           <CampaignForm
             initial={{
               ...editing,
-              tags: (() => { try { return JSON.parse(editing.tags ?? "[]"); } catch { return []; } })(),
+              tags: parseTags(editing),
             }}
             onSave={handleEdit}
             onCancel={() => setEditing(null)}

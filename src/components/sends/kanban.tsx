@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
 import { SendCard } from "./send-card";
 import { Badge } from "@/components/ui/badge";
@@ -33,10 +34,12 @@ interface KanbanProps {
 const STATUS_ORDER = ["idea", "writing", "review", "approved", "scheduled", "sent", "cancelled", "error"];
 
 export function Kanban({ sends, onClickSend, showCampaign }: KanbanProps) {
-  const grouped = STATUS_ORDER.reduce<Record<string, Send[]>>((acc, status) => {
-    acc[status] = sends.filter((s) => s.status === status);
-    return acc;
-  }, {});
+  const grouped = useMemo(() =>
+    STATUS_ORDER.reduce<Record<string, Send[]>>((acc, status) => {
+      acc[status] = sends.filter((s) => s.status === status);
+      return acc;
+    }, {}),
+  [sends]);
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4">
