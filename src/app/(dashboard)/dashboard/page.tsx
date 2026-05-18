@@ -58,6 +58,13 @@ interface DashboardData {
   }[];
 }
 
+const iconColorMap: Record<string, string> = {
+  "bg-violet-50": "text-violet-600",
+  "bg-green-50": "text-green-600",
+  "bg-red-50": "text-red-600",
+  "bg-indigo-50": "text-indigo-600",
+};
+
 function StatCard({ icon: Icon, label, value, sub, color }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -65,6 +72,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
   sub?: string;
   color?: string;
 }) {
+  const iconColor = iconColorMap[color ?? "bg-indigo-50"] ?? "text-indigo-600";
   return (
     <Card>
       <CardContent className="p-5">
@@ -75,7 +83,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
             {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
           </div>
           <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${color ?? "bg-indigo-50"}`}>
-            <Icon className="h-5 w-5 text-indigo-600" />
+            <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
         </div>
       </CardContent>

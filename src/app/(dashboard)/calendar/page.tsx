@@ -2,14 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Header } from "@/components/layout/header";
-import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { SendForm } from "@/components/sends/send-form";
 import {
   CHANNEL_LABELS,
-  STATUS_LABELS,
-  STATUS_COLORS,
-  CHANNEL_COLORS,
 } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from "date-fns";
@@ -156,14 +152,6 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="mt-4 flex flex-wrap gap-3">
-          {Object.entries(STATUS_LABELS).map(([v, l]) => (
-            <div key={v} className="flex items-center gap-1.5">
-              <Badge className={STATUS_COLORS[v]}>{l}</Badge>
-            </div>
-          ))}
-        </div>
       </div>
 
       <Modal open={!!editingSend} onClose={() => setEditingSend(null)} title="Editar disparo" size="lg">

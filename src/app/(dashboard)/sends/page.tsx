@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { SendForm } from "@/components/sends/send-form";
 import { SendCard } from "@/components/sends/send-card";
 import { Kanban } from "@/components/sends/kanban";
+import { useToast } from "@/components/ui/toast";
 import {
   CHANNEL_LABELS,
   STATUS_LABELS,
@@ -18,7 +19,7 @@ import {
   PHASE_LABELS,
   formatDate,
 } from "@/lib/utils";
-import { Plus, Search, List, LayoutGrid, Filter, ExternalLink, Copy, Trash2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Filter, ExternalLink, Copy, Trash2, X } from "lucide-react";
 
 interface Send {
   id: string;
@@ -43,6 +44,7 @@ interface Send {
 type ViewMode = "list" | "kanban" | "table";
 
 export default function SendsPage() {
+  const { toast } = useToast();
   const [sends, setSends] = useState<Send[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -76,49 +78,76 @@ export default function SendsPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleCreate = async (data: object) => {
-    const res = await fetch("/api/sends", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Erro ao criar");
-    setShowCreate(false);
-    load();
+    try {
+      const res = await fetch("/api/sends", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erro ao criar");
+      setShowCreate(false);
+      load();
+      toast.success("Disparo criado!");
+    } catch {
+      toast.error("Erro ao salvar disparo");
+      throw new Error("Erro ao criar");
+    }
   };
 
   const handleEdit = async (data: object) => {
     if (!editing) return;
-    const res = await fetch(`/api/sends/${editing.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Erro ao editar");
-    setEditing(null);
-    load();
+    try {
+      const res = await fetch(`/api/sends/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erro ao editar");
+      setEditing(null);
+      load();
+      toast.success("Disparo salvo!");
+    } catch {
+      toast.error("Erro ao salvar disparo");
+      throw new Error("Erro ao editar");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir este disparo?")) return;
-    await fetch(`/api/sends/${id}`, { method: "DELETE" });
-    load();
+    try {
+      await fetch(`/api/sends/${id}`, { method: "DELETE" });
+      load();
+      toast.success("Disparo excluído!");
+    } catch {
+      toast.error("Erro ao excluir disparo");
+    }
   };
 
   const handleDuplicate = async (id: string) => {
-    await fetch(`/api/sends/${id}/duplicate`, { method: "POST" });
-    load();
+    try {
+      await fetch(`/api/sends/${id}/duplicate`, { method: "POST" });
+      load();
+      toast.success("Disparo duplicado!");
+    } catch {
+      toast.error("Erro ao duplicar disparo");
+    }
   };
 
   const handleBulkStatus = async () => {
     if (!selected.length || !bulkStatus) return;
-    await fetch("/api/sends/bulk", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selected, status: bulkStatus }),
-    });
-    setSelected([]);
-    setBulkStatus("");
-    load();
+    try {
+      await fetch("/api/sends/bulk", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selected, status: bulkStatus }),
+      });
+      setSelected([]);
+      setBulkStatus("");
+      load();
+      toast.success("Status atualizado!");
+    } catch {
+      toast.error("Erro ao atualizar status");
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -145,7 +174,12 @@ export default function SendsPage() {
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-48">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input className="pl-9" placeholder="Buscar disparos..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input className="pl-9 pr-8" placeholder="Buscar disparos..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <Select value={channel} onChange={(e) => setChannel(e.target.value)} className="w-44">
             <option value="">Todos os canais</option>

@@ -27,13 +27,14 @@ export default function SettingsPage() {
     });
   }, []);
 
-  const updateRole = async (userId: string, role: string) => {
+  const updateRole = async (userId: string, newRole: string, currentRole: string) => {
+    if (!confirm(`Alterar papel de "${ROLE_LABELS[currentRole]}" para "${ROLE_LABELS[newRole]}"?`)) return;
     await fetch(`/api/users/${userId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ role: newRole }),
     });
-    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role } : u));
+    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
   };
 
   const ROLE_COLORS: Record<string, string> = {
@@ -75,7 +76,7 @@ export default function SettingsPage() {
                       <Badge className={ROLE_COLORS[user.role]}>{ROLE_LABELS[user.role]}</Badge>
                       <Select
                         value={user.role}
-                        onChange={(e) => updateRole(user.id, e.target.value)}
+                        onChange={(e) => updateRole(user.id, e.target.value, user.role)}
                         className="w-40 h-8 text-xs"
                       >
                         {Object.entries(ROLE_LABELS).map(([v, l]) => (
