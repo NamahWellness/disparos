@@ -1,9 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaNeon } from "@prisma/adapter-neon";
 import bcrypt from "bcryptjs";
-import path from "path";
 
-const adapter = new PrismaBetterSqlite3({ url: path.resolve("./dev.db") });
+const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
 const db = new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
 
 async function main() {
@@ -12,12 +11,7 @@ async function main() {
   const admin = await db.user.upsert({
     where: { email: "admin@campaignops.com" },
     update: {},
-    create: {
-      name: "Admin",
-      email: "admin@campaignops.com",
-      password,
-      role: "admin",
-    },
+    create: { name: "Admin", email: "admin@campaignops.com", password, role: "admin" },
   });
 
   const campaign = await db.campaign.upsert({
@@ -38,52 +32,20 @@ async function main() {
   });
 
   const sends = [
-    {
-      channel: "push", base: "Base", scheduledDate: new Date("2026-04-29"), scheduledTime: "07h00",
-      status: "cancelled", phase: "signup", subject: "Abertura Lote 0 - R$ 19,00", audience: "Base",
-    },
-    {
-      channel: "push", base: "Base", scheduledDate: new Date("2026-04-30"), scheduledTime: "08h00",
-      status: "sent", phase: "signup", subject: "Último Dia Lote 0", audience: "Base",
-    },
-    {
-      channel: "email", base: "Automação", scheduledDate: null, scheduledTime: "Automação FLUXO A",
-      status: "scheduled", phase: "welcome", subject: "Boas Vindas + Orientação Compradores", audience: "Compradores imersão",
-      copyLink: "https://docs.google.com/document/d/1n38amGyWQREp38E2VkxeKDzB-HuOdnaUrRxT4lu9Tt8/",
-    },
-    {
-      channel: "whatsapp_group", base: "Automação", scheduledDate: null, scheduledTime: "automação",
-      status: "scheduled", phase: "invite", subject: "Enxoval grupo", audience: "Compradores imersão",
-    },
-    {
-      channel: "whatsapp_individual", base: "Automação", scheduledDate: null, scheduledTime: "Automação FLUXO A",
-      status: "scheduled", phase: "invite", subject: "Confirmação compra + boas vindas + bonus", audience: "Compradores imersão",
-    },
-    {
-      channel: "call", base: "LIGAÇÃO", scheduledDate: new Date("2026-05-29"), scheduledTime: "12h00",
-      status: "writing", phase: "event", subject: "É AMANHA LIG. 1", audience: "Compradores imersão",
-    },
-    {
-      channel: "sms", base: "SMS", scheduledDate: new Date("2026-05-29"), scheduledTime: "19h00",
-      status: "writing", phase: "event", subject: "É AMANHA SMS. 1", audience: "Compradores imersão",
-    },
-    {
-      channel: "email", base: "Base", scheduledDate: new Date("2026-05-18"), scheduledTime: "09h00",
-      status: "review", phase: "reminder", subject: "Últimas vagas - Confirme sua presença", audience: "Inscritos",
-    },
+    { channel: "push", base: "Base", scheduledDate: new Date("2026-04-29"), scheduledTime: "07h00", status: "cancelled", phase: "signup", subject: "Abertura Lote 0 - R$ 19,00", audience: "Base" },
+    { channel: "push", base: "Base", scheduledDate: new Date("2026-04-30"), scheduledTime: "08h00", status: "sent", phase: "signup", subject: "Último Dia Lote 0", audience: "Base" },
+    { channel: "email", base: "Automação", scheduledDate: null, scheduledTime: "Automação FLUXO A", status: "scheduled", phase: "welcome", subject: "Boas Vindas + Orientação Compradores", audience: "Compradores imersão", copyLink: "https://docs.google.com/document/d/1n38amGyWQREp38E2VkxeKDzB-HuOdnaUrRxT4lu9Tt8/" },
+    { channel: "whatsapp_group", base: "Automação", scheduledDate: null, scheduledTime: "automação", status: "scheduled", phase: "invite", subject: "Enxoval grupo", audience: "Compradores imersão" },
+    { channel: "call", base: "LIGAÇÃO", scheduledDate: new Date("2026-05-29"), scheduledTime: "12h00", status: "writing", phase: "event", subject: "É AMANHA LIG. 1", audience: "Compradores imersão" },
+    { channel: "sms", base: "SMS", scheduledDate: new Date("2026-05-29"), scheduledTime: "19h00", status: "writing", phase: "event", subject: "É AMANHA SMS. 1", audience: "Compradores imersão" },
+    { channel: "email", base: "Base", scheduledDate: new Date("2026-05-18"), scheduledTime: "09h00", status: "review", phase: "reminder", subject: "Últimas vagas - Confirme sua presença", audience: "Inscritos" },
   ];
 
-  for (let i = 0; i < sends.length; i++) {
-    const s = sends[i];
-    await db.send.create({
-      data: { ...s, campaignId: campaign.id },
-    });
+  for (const s of sends) {
+    await db.send.create({ data: { ...s, campaignId: campaign.id } });
   }
 
-  console.log("✓ Seed concluído!");
-  console.log("  Login: admin@campaignops.com / admin123");
+  console.log("✓ Seed concluído! Login: admin@campaignops.com / admin123");
 }
 
-main()
-  .catch(console.error)
-  .finally(() => db.$disconnect());
+main().catch(console.error).finally(() => db.$disconnect());
