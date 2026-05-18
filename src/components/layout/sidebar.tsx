@@ -12,8 +12,9 @@ import {
   Settings,
   LogOut,
   Zap,
+  ShieldCheck,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,11 +22,14 @@ const nav = [
   { href: "/sends", label: "Disparos", icon: Send },
   { href: "/calendar", label: "Calendário", icon: Calendar },
   { href: "/import", label: "Importar", icon: Upload },
-  { href: "/settings", label: "Configurações", icon: Settings },
 ];
+
+const settingsNav = { href: "/settings", label: "Configurações", icon: Settings };
+const adminNav = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <aside className="flex h-full w-60 flex-col border-r border-gray-200 bg-white">
@@ -59,6 +63,44 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {session?.user?.role === "admin" && (() => {
+          const Icon = adminNav.icon;
+          const active = pathname.startsWith(adminNav.href);
+          return (
+            <Link
+              key={adminNav.href}
+              href={adminNav.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                active
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              )}
+            >
+              <Icon className={cn("h-4 w-4", active ? "text-indigo-600" : "text-gray-400")} />
+              {adminNav.label}
+            </Link>
+          );
+        })()}
+        {(() => {
+          const Icon = settingsNav.icon;
+          const active = pathname.startsWith(settingsNav.href);
+          return (
+            <Link
+              key={settingsNav.href}
+              href={settingsNav.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                active
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              )}
+            >
+              <Icon className={cn("h-4 w-4", active ? "text-indigo-600" : "text-gray-400")} />
+              {settingsNav.label}
+            </Link>
+          );
+        })()}
       </nav>
 
       <div className="border-t border-gray-100 p-3">
