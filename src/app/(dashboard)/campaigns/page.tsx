@@ -50,12 +50,6 @@ export default function CampaignsPage() {
     return () => clearTimeout(id);
   }, [search]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = () => setOpenMenuId(null);
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, []);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
@@ -185,6 +179,10 @@ export default function CampaignsPage() {
             </Button>
           </div>
         ) : (
+          <>
+          {openMenuId && (
+            <div className="fixed inset-0 z-[5]" onClick={() => setOpenMenuId(null)} />
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {campaigns.map((c) => {
               const campaignTags = parseTags(c);
@@ -217,7 +215,7 @@ export default function CampaignsPage() {
                         <MoreHorizontal className="h-4 w-4 text-gray-400" />
                       </button>
                       {openMenuId === c.id && (
-                        <div className="absolute right-0 top-9 z-10 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                        <div className="absolute right-0 top-9 z-10 w-44 rounded-xl border border-gray-200 bg-white py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
                           <Link
                             href={`/campaigns/${c.id}`}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -286,6 +284,7 @@ export default function CampaignsPage() {
               );
             })}
           </div>
+          </>
         )}
       </div>
 

@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { Header } from "@/components/layout/header";
 import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 import { SendForm } from "@/components/sends/send-form";
+import { useToast } from "@/components/ui/toast";
 import {
   CHANNEL_LABELS,
 } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -25,10 +27,12 @@ interface Send {
 }
 
 export default function CalendarPage() {
+  const { toast } = useToast();
   const [sends, setSends] = useState<Send[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selected, setSelected] = useState<Send | null>(null);
   const [editingSend, setEditingSend] = useState<Send | null>(null);
+  const [newSendDate, setNewSendDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const from = format(startOfMonth(currentMonth), "yyyy-MM-dd");
@@ -59,11 +63,33 @@ export default function CalendarPage() {
     });
     setEditingSend(null);
     load();
+    toast.success("Disparo salvo!");
+  };
+
+  const handleCreateSend = async (data: object) => {
+    const res = await fetch("/api/sends", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) { toast.error("Erro ao criar disparo"); return; }
+    setNewSendDate(null);
+    load();
+    toast.success("Disparo criado!");
   };
 
   return (
     <div className="flex flex-col h-full">
-      <Header title="Calendário" subtitle="Visualize os disparos por data" />
+      <Header
+        title="Calendário"
+        subtitle="Visualize os disparos por data"
+        actions={
+          <Button onClick={() => setNewSendDate(format(new Date(), "yyyy-MM-dd"))}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Novo disparo
+          </Button>
+        }
+      />
       <div className="flex-1 overflow-auto p-6">
         {/* Month nav */}
         <div className="flex items-center justify-between mb-6">
@@ -113,23 +139,28 @@ export default function CalendarPage() {
             {days.map((day) => {
               const daySends = getSendsForDay(day);
               const isToday = isSameDay(day, new Date());
+              const dateStr = format(day, "yyyy-MM-dd");
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-[120px] border-b border-r border-gray-100 p-2 ${
+                  onClick={() => setNewSendDate(dateStr)}
+                  className={`group min-h-[120px] border-b border-r border-gray-100 p-2 cursor-pointer hover:bg-indigo-50/30 transition-colors ${
                     !isSameMonth(day, currentMonth) ? "bg-gray-50/50" : ""
                   }`}
                 >
-                  <div className={`mb-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                    isToday ? "bg-indigo-600 text-white" : "text-gray-700"
-                  }`}>
-                    {format(day, "d")}
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                      isToday ? "bg-indigo-600 text-white" : "text-gray-700"
+                    }`}>
+                      {format(day, "d")}
+                    </div>
+                    <Plus className="h-3.5 w-3.5 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <div className="space-y-0.5">
                     {daySends.slice(0, 3).map((send) => (
                       <button
                         key={send.id}
-                        onClick={() => setEditingSend(send)}
+                        onClick={(e) => { e.stopPropagation(); setEditingSend(send); }}
                         className="block w-full text-left"
                       >
                         <div
@@ -143,7 +174,7 @@ export default function CalendarPage() {
                       </button>
                     ))}
                     {daySends.length > 3 && (
-                      <p className="text-[10px] text-gray-400 px-1">+{daySends.length - 3} mais</p>
+                      <p className="text-[10px] text-gray-400 px-1" onClick={(e) => e.stopPropagation()}>+{daySends.length - 3} mais</p>
                     )}
                   </div>
                 </div>
@@ -153,6 +184,16 @@ export default function CalendarPage() {
         </div>
 
       </div>
+
+      <Modal open={!!newSendDate} onClose={() => setNewSendDate(null)} title="Novo disparo" size="lg">
+        {newSendDate && (
+          <SendForm
+            initial={{ scheduledDate: newSendDate }}
+            onSave={handleCreateSend}
+            onCancel={() => setNewSendDate(null)}
+          />
+        )}
+      </Modal>
 
       <Modal open={!!editingSend} onClose={() => setEditingSend(null)} title="Editar disparo" size="lg">
         {editingSend && (

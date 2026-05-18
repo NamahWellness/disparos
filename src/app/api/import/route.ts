@@ -71,6 +71,39 @@ function parseRows(ws: XLSX.WorkSheet, sheetName: string) {
   }).filter((r) => r.subject || r.base || r.audience);
 }
 
+export async function GET() {
+  const session = await auth();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const wb = XLSX.utils.book_new();
+
+  const sheets = [
+    { name: "E-mails", channel: "email" },
+    { name: "WhatsApp Grupos", channel: "whatsapp_group" },
+    { name: "WhatsApp Individual", channel: "whatsapp" },
+    { name: "SMS", channel: "sms" },
+    { name: "Push", channel: "push" },
+  ];
+
+  const headers = ["BASE/DATA", "DIA", "HORA", "STATUS", "FASE", "ASSUNTO/TEMA", "PÚBLICO/LISTA", "COPY", "ENVIOS", "LEITURA/ABERTURA", "CLIQUES"];
+  const example = ["Lista VIP", "2025-06-01", "10:00", "scheduled", "awareness", "Promoção de Junho", "Todos os clientes", "https://link.com/copy", "", "", ""];
+
+  for (const { name } of sheets) {
+    const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 16) }));
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  }
+
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+  return new Response(buf, {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": 'attachment; filename="modelo_disparos.xlsx"',
+    },
+  });
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

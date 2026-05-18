@@ -14,7 +14,7 @@ import {
   CHANNEL_COLORS,
   formatDate,
 } from "@/lib/utils";
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, ArrowRight, Download } from "lucide-react";
 
 interface PreviewRow {
   rowIndex: number;
@@ -104,7 +104,18 @@ export default function ImportPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <Header title="Importar planilha" subtitle="Importe campanhas a partir da planilha modelo" />
+      <Header
+        title="Importar planilha"
+        subtitle="Importe campanhas a partir da planilha modelo"
+        actions={
+          <a href="/api/import" download="modelo_disparos.xlsx">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-1.5" />
+              Baixar modelo
+            </Button>
+          </a>
+        }
+      />
       <div className="flex-1 overflow-auto p-6">
         {/* Steps indicator */}
         <div className="flex items-center gap-3 mb-8">
@@ -203,7 +214,15 @@ export default function ImportPage() {
             </Card>
 
             <Card className="mt-4">
-              <CardHeader><CardTitle>Formato esperado</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Formato esperado</CardTitle>
+                  <a href="/api/import" download="modelo_disparos.xlsx" className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                    <Download className="h-3.5 w-3.5" />
+                    Baixar planilha modelo
+                  </a>
+                </div>
+              </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-3">
                   A planilha deve ter abas por canal (E-mails, WhatsApp Grupos, etc.) com colunas:
