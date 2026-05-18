@@ -115,6 +115,7 @@ model Send {
   externalId    String?
   notes         String?
   sentAt        DateTime?
+  alertSentAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -198,7 +199,23 @@ model Notification {
   type      String   @default("info")
   read      Boolean  @default(false)
   link      String?
+  sendId    String?
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SystemSettings {
+  id                String   @id @default("singleton")
+  alertHoursBefore  Int      @default(24)
+  emailEnabled      Boolean  @default(false)
+  slackEnabled      Boolean  @default(false)
+  whatsappEnabled   Boolean  @default(false)
+  postmarkApiKey    String?
+  postmarkFromEmail String?
+  slackWebhookUrl   String?
+  zApiInstanceId    String?
+  zApiToken         String?
+  zApiPhones        String?
+  updatedAt         DateTime @updatedAt
 }

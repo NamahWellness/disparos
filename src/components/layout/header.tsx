@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { Bell, Search } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/utils";
+import { NotificationBell } from "./notification-bell";
 
 interface HeaderProps {
   title: string;
@@ -21,9 +21,7 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
       </div>
       <div className="flex items-center gap-3">
         {actions}
-        <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-          <Bell className="h-4 w-4 text-gray-500" />
-        </button>
+        <NotificationBell />
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-sm font-semibold">
             {session?.user?.name?.[0]?.toUpperCase() ?? "U"}

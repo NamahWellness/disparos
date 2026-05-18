@@ -16,22 +16,24 @@ import {
   STATUS_COLORS,
   CHANNEL_LABELS,
   CHANNEL_COLORS,
+  PHASE_LABELS,
   formatDate,
-  formatDateTime,
 } from "@/lib/utils";
 import {
   Plus,
-  Calendar,
   LayoutGrid,
   List,
+  Table,
   ArrowLeft,
   Edit,
-  CheckCircle,
   Send,
-  Clock,
-  AlertTriangle,
+  Copy,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { CampaignForm } from "@/components/campaigns/campaign-form";
+import { useToast } from "@/components/ui/toast";
 
 interface SendData {
   id: string;
@@ -71,16 +73,19 @@ interface CampaignDetail {
   _count: { sends: number };
 }
 
-type ViewMode = "list" | "kanban";
+type ViewMode = "list" | "kanban" | "table";
 
 export default function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { toast } = useToast();
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("list");
   const [showAddSend, setShowAddSend] = useState(false);
   const [editingSend, setEditingSend] = useState<SendData | null>(null);
   const [activeTab, setActiveTab] = useState("sends");
+  const [showEditCampaign, setShowEditCampaign] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/campaigns/${id}`);
@@ -120,6 +125,33 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
     load();
   };
 
+  const handleEditCampaign = async (data: object) => {
+    const res = await fetch(`/api/campaigns/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("Erro ao salvar");
+    setShowEditCampaign(false);
+    load();
+    toast.success("Campanha salva!");
+  };
+
+  const handleDuplicateCampaign = async () => {
+    const res = await fetch(`/api/campaigns/${id}/duplicate`, { method: "POST" });
+    if (!res.ok) { toast.error("Erro ao duplicar"); return; }
+    const dup = await res.json();
+    toast.success("Campanha duplicada!");
+    router.push(`/campaigns/${dup.id}`);
+  };
+
+  const handleDeleteCampaign = async () => {
+    if (!confirm("Tem certeza? Isso apagará todos os disparos da campanha.")) return;
+    await fetch(`/api/campaigns/${id}`, { method: "DELETE" });
+    toast.success("Campanha excluída!");
+    router.push("/campaigns");
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -155,6 +187,18 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                 Voltar
               </Button>
             </Link>
+            <Button variant="outline" size="sm" onClick={() => setShowEditCampaign(true)}>
+              <Edit className="h-4 w-4 mr-1.5" />
+              Editar
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDuplicateCampaign}>
+              <Copy className="h-4 w-4 mr-1.5" />
+              Duplicar
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDeleteCampaign} className="text-red-600 border-red-200 hover:bg-red-50">
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Excluir
+            </Button>
             <Button onClick={() => setShowAddSend(true)}>
               <Plus className="h-4 w-4 mr-1.5" />
               Novo disparo
@@ -270,14 +314,23 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                   <button
                     onClick={() => setView("list")}
                     className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${view === "list" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-600"}`}
+                    title="Lista"
                   >
                     <List className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setView("kanban")}
                     className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${view === "kanban" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-600"}`}
+                    title="Kanban"
                   >
                     <LayoutGrid className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setView("table")}
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${view === "table" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-600"}`}
+                    title="Tabela"
+                  >
+                    <Table className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -295,6 +348,54 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               ) : view === "kanban" ? (
                 <Kanban sends={campaign.sends} onClickSend={setEditingSend} />
+              ) : view === "table" ? (
+                <div className="overflow-auto rounded-xl border border-gray-200 bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50">
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Assunto</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Canal</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Fase</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Data</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Público</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Enviados</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">Cliques</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600">CTR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaign.sends.map((send) => (
+                        <tr
+                          key={send.id}
+                          onClick={() => setEditingSend(send)}
+                          className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <td className="px-4 py-2.5 font-medium text-gray-900 max-w-xs truncate">{send.subject ?? "-"}</td>
+                          <td className="px-4 py-2.5">
+                            <Badge className={CHANNEL_COLORS[send.channel]}>{CHANNEL_LABELS[send.channel]}</Badge>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <Badge className={STATUS_COLORS[send.status]}>{STATUS_LABELS[send.status]}</Badge>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500">
+                            {send.phase ? (PHASE_LABELS[send.phase] ?? send.phase) : "-"}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                            {send.scheduledDate ? formatDate(send.scheduledDate) : "-"}
+                            {send.scheduledTime && ` ${send.scheduledTime}`}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[160px] truncate">{send.audience ?? "-"}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-700">{send.metrics?.sent?.toLocaleString() ?? "-"}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-700">{send.metrics?.clicks?.toLocaleString() ?? "-"}</td>
+                          <td className="px-4 py-2.5 text-xs font-medium text-green-600">
+                            {send.metrics?.clickRate != null ? `${(send.metrics.clickRate * 100).toFixed(1)}%` : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                   {campaign.sends.map((send) => (
@@ -319,6 +420,16 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
           )}
         </div>
       </div>
+
+      <Modal open={showEditCampaign} onClose={() => setShowEditCampaign(false)} title="Editar campanha" size="lg">
+        {campaign && (
+          <CampaignForm
+            initial={{ ...campaign, tags: (() => { try { return JSON.parse(campaign.tags ?? "[]"); } catch { return []; } })() }}
+            onSave={handleEditCampaign}
+            onCancel={() => setShowEditCampaign(false)}
+          />
+        )}
+      </Modal>
 
       <Modal open={showAddSend} onClose={() => setShowAddSend(false)} title="Novo disparo" size="lg">
         <SendForm campaignId={id} onSave={handleCreateSend} onCancel={() => setShowAddSend(false)} />

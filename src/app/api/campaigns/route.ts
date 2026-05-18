@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const campaigns = await db.campaign.findMany({
     where: {
       ...(status ? { status } : {}),
-      ...(search ? { name: { contains: search } } : {}),
+      ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
     },
     include: {
       owner: { select: { id: true, name: true, email: true, image: true } },

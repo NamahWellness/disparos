@@ -22,6 +22,8 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       subject: original.subject ? `${original.subject} (cópia)` : null,
       audience: original.audience,
       copyLink: original.copyLink,
+      copyOwnerId: original.copyOwnerId,
+      sendOwnerId: original.sendOwnerId,
       platform: original.platform,
       notes: original.notes,
     },

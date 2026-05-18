@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { TagInput } from "@/components/ui/tag-input";
 import { CAMPAIGN_STATUS_LABELS } from "@/lib/utils";
 
 interface Campaign {
@@ -40,19 +41,17 @@ export function CampaignForm({ initial, onSave, onCancel }: CampaignFormProps) {
     notes: initial?.notes ?? "",
     color: initial?.color ?? "#6366f1",
   });
-  const [tagInput, setTagInput] = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const set = (key: keyof Campaign, value: unknown) => setForm((f) => ({ ...f, [key]: value }));
 
-  const addTag = () => {
-    if (!tagInput.trim()) return;
-    set("tags", [...(form.tags ?? []), tagInput.trim()]);
-    setTagInput("");
-  };
-
-  const removeTag = (tag: string) => set("tags", form.tags?.filter((t) => t !== tag));
+  useEffect(() => {
+    fetch("/api/tags").then((r) => r.json()).then((data) => {
+      if (Array.isArray(data)) setTagSuggestions(data);
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,25 +137,11 @@ export function CampaignForm({ initial, onSave, onCancel }: CampaignFormProps) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-        <div className="flex gap-2">
-          <Input
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-            placeholder="Adicionar tag..."
-          />
-          <Button type="button" variant="outline" size="sm" onClick={addTag}>+</Button>
-        </div>
-        {(form.tags?.length ?? 0) > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {form.tags?.map((tag) => (
-              <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
-                {tag}
-                <button type="button" onClick={() => removeTag(tag)} className="hover:text-indigo-900">×</button>
-              </span>
-            ))}
-          </div>
-        )}
+        <TagInput
+          value={form.tags ?? []}
+          onChange={(tags) => set("tags", tags)}
+          suggestions={tagSuggestions}
+        />
       </div>
 
       <div>
