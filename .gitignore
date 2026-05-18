@@ -1,0 +1,20 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+
+# Next.js
+.next/
+out/
+
+# Database
+*.db
+*.db-journal
+
+# Prisma
+prisma/migrations/dev.db
+
+# Misc
+*.pem
+npm-debug.log*
