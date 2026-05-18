@@ -90,6 +90,7 @@ export default function ImportPage() {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("preview", "false");
+    if (campaignName.trim()) fd.append("campaignName", campaignName.trim());
     const res = await fetch("/api/import", { method: "POST", body: fd });
     if (!res.ok) {
       setError("Erro ao importar");

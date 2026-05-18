@@ -111,6 +111,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file") as File;
   const campaignId = formData.get("campaignId") as string | null;
+  const campaignName = formData.get("campaignName") as string | null;
   const preview = formData.get("preview") === "true";
 
   if (!file) return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 });
@@ -141,22 +142,22 @@ export async function POST(req: Request) {
     },
   });
 
+  // Resolve campaign ID once — create a single campaign when none is provided
+  let resolvedCampaignId = campaignId || null;
+  if (!resolvedCampaignId) {
+    const name = campaignName?.trim() || file.name.replace(/\.[^/.]+$/, "");
+    const campaign = await db.campaign.create({
+      data: { name, status: "active", ownerId: session.user!.id! },
+    });
+    resolvedCampaignId = campaign.id;
+  }
+
   let ok = 0;
   let errors = 0;
 
   for (const row of allRows) {
     try {
-      let cId = campaignId;
-      if (!cId) {
-        const campaign = await db.campaign.create({
-          data: {
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            status: "active",
-            ownerId: session.user!.id!,
-          },
-        });
-        cId = campaign.id;
-      }
+      const cId = resolvedCampaignId;
 
       const send = await db.send.create({
         data: {
