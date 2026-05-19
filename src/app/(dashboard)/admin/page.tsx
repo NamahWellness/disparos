@@ -289,6 +289,7 @@ export default function AdminPage() {
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifSaving, setNotifSaving] = useState(false);
   const [notifTesting, setNotifTesting] = useState<string | null>(null);
+  const [notifLoaded, setNotifLoaded] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -352,6 +353,7 @@ export default function AdminPage() {
           zApiToken: data.zApiToken ?? "",
           zApiPhones: data.zApiPhones ?? "",
         });
+        setNotifLoaded(true);
       }
     } finally {
       setNotifLoading(false);
@@ -402,8 +404,8 @@ export default function AdminPage() {
     if (tab === "activity" && logs.length === 0) loadLogs();
     if (tab === "imports" && imports.length === 0) loadImports();
     if (tab === "system" && !stats) loadStats();
-    if (tab === "notifications" && !notifLoading && notifSettings.alertHoursBefore === 24 && !notifSettings.emailEnabled) loadNotifSettings();
-  }, [tab, logs.length, imports.length, stats, loadLogs, loadImports, loadStats, loadNotifSettings, notifLoading, notifSettings]);
+    if (tab === "notifications" && !notifLoaded) loadNotifSettings();
+  }, [tab, logs.length, imports.length, stats, notifLoaded, loadLogs, loadImports, loadStats, loadNotifSettings]);
 
   function openEdit(user: UserRow) {
     setEditUser(user);
