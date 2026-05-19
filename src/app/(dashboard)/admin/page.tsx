@@ -28,9 +28,14 @@ import {
   Trash2,
   Megaphone,
   Send,
+  Bell,
+  Mail,
+  MessageSquare,
+  Phone,
+  Save,
 } from "lucide-react";
 
-type Tab = "users" | "activity" | "imports" | "system";
+type Tab = "users" | "activity" | "imports" | "system" | "notifications";
 
 interface UserRow {
   id: string;
@@ -57,6 +62,19 @@ interface ImportRow {
   errors?: number | null;
   createdAt: string;
   campaign?: { id: string; name: string } | null;
+}
+
+interface NotifSettings {
+  alertHoursBefore: number;
+  emailEnabled: boolean;
+  slackEnabled: boolean;
+  whatsappEnabled: boolean;
+  postmarkApiKey: string;
+  postmarkFromEmail: string;
+  slackWebhookUrl: string;
+  zApiInstanceId: string;
+  zApiToken: string;
+  zApiPhones: string;
 }
 
 interface StatsData {
@@ -261,6 +279,18 @@ export default function AdminPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  // Notification settings
+  const [notifSettings, setNotifSettings] = useState<NotifSettings>({
+    alertHoursBefore: 24,
+    emailEnabled: false, slackEnabled: false, whatsappEnabled: false,
+    postmarkApiKey: "", postmarkFromEmail: "",
+    slackWebhookUrl: "", zApiInstanceId: "", zApiToken: "", zApiPhones: "",
+  });
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifTesting, setNotifTesting] = useState<string | null>(null);
+  const [notifLoaded, setNotifLoaded] = useState(false);
+
   const loadUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
@@ -305,6 +335,67 @@ export default function AdminPage() {
     }
   }, []);
 
+  const loadNotifSettings = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const res = await fetch("/api/admin/notification-settings");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifSettings({
+          alertHoursBefore: data.alertHoursBefore ?? 24,
+          emailEnabled: data.emailEnabled ?? false,
+          slackEnabled: data.slackEnabled ?? false,
+          whatsappEnabled: data.whatsappEnabled ?? false,
+          postmarkApiKey: data.postmarkApiKey ?? "",
+          postmarkFromEmail: data.postmarkFromEmail ?? "",
+          slackWebhookUrl: data.slackWebhookUrl ?? "",
+          zApiInstanceId: data.zApiInstanceId ?? "",
+          zApiToken: data.zApiToken ?? "",
+          zApiPhones: data.zApiPhones ?? "",
+        });
+        setNotifLoaded(true);
+      }
+    } finally {
+      setNotifLoading(false);
+    }
+  }, []);
+
+  const saveNotifSettings = async () => {
+    setNotifSaving(true);
+    try {
+      const res = await fetch("/api/admin/notification-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...notifSettings,
+          postmarkApiKey: notifSettings.postmarkApiKey || null,
+          postmarkFromEmail: notifSettings.postmarkFromEmail || null,
+          slackWebhookUrl: notifSettings.slackWebhookUrl || null,
+          zApiInstanceId: notifSettings.zApiInstanceId || null,
+          zApiToken: notifSettings.zApiToken || null,
+          zApiPhones: notifSettings.zApiPhones || null,
+        }),
+      });
+      if (res.ok) toast.success("Configurações salvas!");
+      else toast.error("Erro ao salvar configurações");
+    } finally {
+      setNotifSaving(false);
+    }
+  };
+
+  const testCron = async () => {
+    setNotifTesting("cron");
+    try {
+      const res = await fetch("/api/cron/check-sends");
+      const data = await res.json();
+      toast.success(`Cron executado: ${data.checked ?? 0} disparos verificados, ${data.notified ?? 0} notificados`);
+    } catch {
+      toast.error("Erro ao executar cron");
+    } finally {
+      setNotifTesting(null);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
@@ -313,7 +404,8 @@ export default function AdminPage() {
     if (tab === "activity" && logs.length === 0) loadLogs();
     if (tab === "imports" && imports.length === 0) loadImports();
     if (tab === "system" && !stats) loadStats();
-  }, [tab, logs.length, imports.length, stats, loadLogs, loadImports, loadStats]);
+    if (tab === "notifications" && !notifLoaded) loadNotifSettings();
+  }, [tab, logs.length, imports.length, stats, notifLoaded, loadLogs, loadImports, loadStats, loadNotifSettings]);
 
   function openEdit(user: UserRow) {
     setEditUser(user);
@@ -413,6 +505,7 @@ export default function AdminPage() {
     { key: "activity", label: "Atividade", icon: Activity },
     { key: "imports", label: "Importações", icon: FileUp },
     { key: "system", label: "Sistema", icon: BarChart3 },
+    { key: "notifications", label: "Notificações", icon: Bell },
   ];
 
   return (
@@ -579,6 +672,158 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Notificações tab */}
+        {tab === "notifications" && (
+          <div className="space-y-5">
+            {notifLoading ? <Spinner /> : (
+              <>
+                {/* Configurações gerais */}
+                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 space-y-5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Configurações gerais</p>
+
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm font-medium text-gray-700 w-48">Antecedência do alerta</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={168}
+                        value={notifSettings.alertHoursBefore}
+                        onChange={(e) => setNotifSettings((s) => ({ ...s, alertHoursBefore: Number(e.target.value) }))}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-gray-500">horas antes do disparo</span>
+                    </div>
+                  </div>
+
+                  {/* Channel toggles */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {([
+                      { key: "emailEnabled", icon: Mail, label: "E-mail (Postmark)", color: "text-blue-600" },
+                      { key: "slackEnabled", icon: MessageSquare, label: "Slack", color: "text-purple-600" },
+                      { key: "whatsappEnabled", icon: Phone, label: "WhatsApp (Z-API)", color: "text-green-600" },
+                    ] as const).map(({ key, icon: Icon, label, color }) => (
+                      <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-100 p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={notifSettings[key]}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, [key]: e.target.checked }))}
+                          className="h-4 w-4 rounded accent-indigo-600"
+                        />
+                        <Icon className={`h-4 w-4 ${color}`} />
+                        <span className="text-sm font-medium text-gray-700">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* E-mail */}
+                {notifSettings.emailEnabled && (
+                  <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      <p className="text-sm font-semibold text-gray-900">E-mail — Postmark</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700">API Key do Postmark</label>
+                        <Input
+                          type="password"
+                          value={notifSettings.postmarkApiKey}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, postmarkApiKey: e.target.value }))}
+                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700">E-mail remetente</label>
+                        <Input
+                          type="email"
+                          value={notifSettings.postmarkFromEmail}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, postmarkFromEmail: e.target.value }))}
+                          placeholder="alertas@suaempresa.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slack */}
+                {notifSettings.slackEnabled && (
+                  <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-purple-600" />
+                      <p className="text-sm font-semibold text-gray-900">Slack — Incoming Webhook</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-gray-700">Webhook URL</label>
+                      <Input
+                        value={notifSettings.slackWebhookUrl}
+                        onChange={(e) => setNotifSettings((s) => ({ ...s, slackWebhookUrl: e.target.value }))}
+                        placeholder="https://hooks.slack.com/services/..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* WhatsApp */}
+                {notifSettings.whatsappEnabled && (
+                  <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-green-600" />
+                      <p className="text-sm font-semibold text-gray-900">WhatsApp — Z-API</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700">Instance ID</label>
+                        <Input
+                          value={notifSettings.zApiInstanceId}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, zApiInstanceId: e.target.value }))}
+                          placeholder="ID da instância Z-API"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-gray-700">Token</label>
+                        <Input
+                          type="password"
+                          value={notifSettings.zApiToken}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, zApiToken: e.target.value }))}
+                          placeholder="Token da instância"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-gray-700">Números para notificar (separados por vírgula)</label>
+                      <Input
+                        value={notifSettings.zApiPhones}
+                        onChange={(e) => setNotifSettings((s) => ({ ...s, zApiPhones: e.target.value }))}
+                        placeholder='["5511999999999", "5511888888888"]'
+                      />
+                      <p className="text-xs text-gray-400">Formato JSON: [&quot;5511999999999&quot;, &quot;5511888888888&quot;]</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-3">
+                  <Button onClick={saveNotifSettings} loading={notifSaving} className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    Salvar configurações
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={testCron}
+                    loading={notifTesting === "cron"}
+                    className="flex items-center gap-2"
+                  >
+                    Testar agora
+                  </Button>
+                  <p className="text-xs text-gray-400">O cron roda automaticamente todo hora no Vercel.</p>
+                </div>
+              </>
             )}
           </div>
         )}

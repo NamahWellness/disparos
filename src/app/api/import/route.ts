@@ -112,6 +112,8 @@ export async function POST(req: Request) {
   const file = formData.get("file") as File;
   const campaignId = formData.get("campaignId") as string | null;
   const campaignName = formData.get("campaignName") as string | null;
+  const campaignMetaRaw = formData.get("campaignMeta") as string | null;
+  const campaignMeta = campaignMetaRaw ? JSON.parse(campaignMetaRaw) : null;
   const preview = formData.get("preview") === "true";
 
   if (!file) return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 });
@@ -145,9 +147,20 @@ export async function POST(req: Request) {
   // Resolve campaign ID once — create a single campaign when none is provided
   let resolvedCampaignId = campaignId || null;
   if (!resolvedCampaignId) {
-    const name = campaignName?.trim() || file.name.replace(/\.[^/.]+$/, "");
+    const name = campaignMeta?.name?.trim() || campaignName?.trim() || file.name.replace(/\.[^/.]+$/, "");
     const campaign = await db.campaign.create({
-      data: { name, status: "active", ownerId: session.user!.id! },
+      data: {
+        name,
+        description: campaignMeta?.description || null,
+        product: campaignMeta?.product || null,
+        status: campaignMeta?.status || "active",
+        startDate: campaignMeta?.startDate ? new Date(campaignMeta.startDate) : null,
+        endDate: campaignMeta?.endDate ? new Date(campaignMeta.endDate) : null,
+        color: campaignMeta?.color || "#6366f1",
+        tags: campaignMeta?.tags?.length ? JSON.stringify(campaignMeta.tags) : null,
+        notes: campaignMeta?.notes || null,
+        ownerId: session.user!.id!,
+      },
     });
     resolvedCampaignId = campaign.id;
   }
@@ -218,5 +231,5 @@ export async function POST(req: Request) {
     data: { status: "done", rowsOk: ok, rowsError: errors },
   });
 
-  return NextResponse.json({ importFileId: importFile.id, total: allRows.length, ok, errors });
+  return NextResponse.json({ importFileId: importFile.id, campaignId: resolvedCampaignId, total: allRows.length, ok, errors });
 }
