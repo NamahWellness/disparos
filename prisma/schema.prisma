@@ -211,11 +211,12 @@ model SystemSettings {
   emailEnabled      Boolean  @default(false)
   slackEnabled      Boolean  @default(false)
   whatsappEnabled   Boolean  @default(false)
-  postmarkApiKey    String?
-  postmarkFromEmail String?
-  slackWebhookUrl   String?
-  zApiInstanceId    String?
-  zApiToken         String?
-  zApiPhones        String?
+  postmarkApiKey      String?
+  postmarkFromEmail   String?
+  slackWebhookUrl     String?
+  evolutionApiUrl     String?
+  evolutionApiKey     String?
+  evolutionApiInstance String?
+  evolutionApiPhones  String?
   updatedAt         DateTime @updatedAt
 }

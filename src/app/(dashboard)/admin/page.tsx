@@ -72,9 +72,10 @@ interface NotifSettings {
   postmarkApiKey: string;
   postmarkFromEmail: string;
   slackWebhookUrl: string;
-  zApiInstanceId: string;
-  zApiToken: string;
-  zApiPhones: string;
+  evolutionApiUrl: string;
+  evolutionApiKey: string;
+  evolutionApiInstance: string;
+  evolutionApiPhones: string;
 }
 
 interface StatsData {
@@ -284,7 +285,7 @@ export default function AdminPage() {
     alertHoursBefore: 24,
     emailEnabled: false, slackEnabled: false, whatsappEnabled: false,
     postmarkApiKey: "", postmarkFromEmail: "",
-    slackWebhookUrl: "", zApiInstanceId: "", zApiToken: "", zApiPhones: "",
+    slackWebhookUrl: "", evolutionApiUrl: "", evolutionApiKey: "", evolutionApiInstance: "", evolutionApiPhones: "",
   });
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifSaving, setNotifSaving] = useState(false);
@@ -349,9 +350,10 @@ export default function AdminPage() {
           postmarkApiKey: data.postmarkApiKey ?? "",
           postmarkFromEmail: data.postmarkFromEmail ?? "",
           slackWebhookUrl: data.slackWebhookUrl ?? "",
-          zApiInstanceId: data.zApiInstanceId ?? "",
-          zApiToken: data.zApiToken ?? "",
-          zApiPhones: data.zApiPhones ?? "",
+          evolutionApiUrl: data.evolutionApiUrl ?? "",
+          evolutionApiKey: data.evolutionApiKey ?? "",
+          evolutionApiInstance: data.evolutionApiInstance ?? "",
+          evolutionApiPhones: data.evolutionApiPhones ?? "",
         });
         setNotifLoaded(true);
       }
@@ -371,9 +373,10 @@ export default function AdminPage() {
           postmarkApiKey: notifSettings.postmarkApiKey || null,
           postmarkFromEmail: notifSettings.postmarkFromEmail || null,
           slackWebhookUrl: notifSettings.slackWebhookUrl || null,
-          zApiInstanceId: notifSettings.zApiInstanceId || null,
-          zApiToken: notifSettings.zApiToken || null,
-          zApiPhones: notifSettings.zApiPhones || null,
+          evolutionApiUrl: notifSettings.evolutionApiUrl || null,
+          evolutionApiKey: notifSettings.evolutionApiKey || null,
+          evolutionApiInstance: notifSettings.evolutionApiInstance || null,
+          evolutionApiPhones: notifSettings.evolutionApiPhones || null,
         }),
       });
       if (res.ok) toast.success("Configurações salvas!");
@@ -705,7 +708,7 @@ export default function AdminPage() {
                     {([
                       { key: "emailEnabled", icon: Mail, label: "E-mail (Postmark)", color: "text-blue-600" },
                       { key: "slackEnabled", icon: MessageSquare, label: "Slack", color: "text-purple-600" },
-                      { key: "whatsappEnabled", icon: Phone, label: "WhatsApp (Z-API)", color: "text-green-600" },
+                      { key: "whatsappEnabled", icon: Phone, label: "WhatsApp (Evolution API)", color: "text-green-600" },
                     ] as const).map(({ key, icon: Icon, label, color }) => (
                       <label key={key} className="flex items-center gap-3 rounded-xl border border-gray-100 p-4 cursor-pointer hover:bg-gray-50 transition-colors">
                         <input
@@ -774,32 +777,40 @@ export default function AdminPage() {
                   <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 space-y-4">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-green-600" />
-                      <p className="text-sm font-semibold text-gray-900">WhatsApp — Z-API</p>
+                      <p className="text-sm font-semibold text-gray-900">WhatsApp — Evolution API</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-700">Instance ID</label>
+                        <label className="text-xs font-medium text-gray-700">URL da Evolution API</label>
                         <Input
-                          value={notifSettings.zApiInstanceId}
-                          onChange={(e) => setNotifSettings((s) => ({ ...s, zApiInstanceId: e.target.value }))}
-                          placeholder="ID da instância Z-API"
+                          value={notifSettings.evolutionApiUrl}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, evolutionApiUrl: e.target.value }))}
+                          placeholder="https://api.seudominio.com"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-700">Token</label>
+                        <label className="text-xs font-medium text-gray-700">API Key</label>
                         <Input
                           type="password"
-                          value={notifSettings.zApiToken}
-                          onChange={(e) => setNotifSettings((s) => ({ ...s, zApiToken: e.target.value }))}
-                          placeholder="Token da instância"
+                          value={notifSettings.evolutionApiKey}
+                          onChange={(e) => setNotifSettings((s) => ({ ...s, evolutionApiKey: e.target.value }))}
+                          placeholder="sua-api-key"
                         />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-gray-700">Números para notificar (separados por vírgula)</label>
+                      <label className="text-xs font-medium text-gray-700">Nome da instância</label>
                       <Input
-                        value={notifSettings.zApiPhones}
-                        onChange={(e) => setNotifSettings((s) => ({ ...s, zApiPhones: e.target.value }))}
+                        value={notifSettings.evolutionApiInstance}
+                        onChange={(e) => setNotifSettings((s) => ({ ...s, evolutionApiInstance: e.target.value }))}
+                        placeholder="minha-instancia"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-gray-700">Números para notificar</label>
+                      <Input
+                        value={notifSettings.evolutionApiPhones}
+                        onChange={(e) => setNotifSettings((s) => ({ ...s, evolutionApiPhones: e.target.value }))}
                         placeholder='["5511999999999", "5511888888888"]'
                       />
                       <p className="text-xs text-gray-400">Formato JSON: [&quot;5511999999999&quot;, &quot;5511888888888&quot;]</p>

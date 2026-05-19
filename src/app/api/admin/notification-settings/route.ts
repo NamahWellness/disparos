@@ -20,9 +20,10 @@ export async function GET() {
       postmarkApiKey: null,
       postmarkFromEmail: null,
       slackWebhookUrl: null,
-      zApiInstanceId: null,
-      zApiToken: null,
-      zApiPhones: null,
+      evolutionApiUrl: null,
+      evolutionApiKey: null,
+      evolutionApiInstance: null,
+      evolutionApiPhones: null,
     }
   );
 }

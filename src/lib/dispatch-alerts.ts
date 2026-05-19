@@ -20,9 +20,10 @@ interface Settings {
   postmarkApiKey: string | null;
   postmarkFromEmail: string | null;
   slackWebhookUrl: string | null;
-  zApiInstanceId: string | null;
-  zApiToken: string | null;
-  zApiPhones: string | null;
+  evolutionApiUrl: string | null;
+  evolutionApiKey: string | null;
+  evolutionApiInstance: string | null;
+  evolutionApiPhones: string | null;
 }
 
 function buildMessage(send: SendForAlert): { title: string; body: string } {
@@ -95,22 +96,25 @@ async function sendSlack(send: SendForAlert, settings: Settings) {
 }
 
 async function sendWhatsApp(send: SendForAlert, settings: Settings) {
-  if (!settings.zApiInstanceId || !settings.zApiToken || !settings.zApiPhones) return;
+  if (!settings.evolutionApiUrl || !settings.evolutionApiKey || !settings.evolutionApiInstance || !settings.evolutionApiPhones) return;
 
-  const phones: string[] = JSON.parse(settings.zApiPhones);
+  const phones: string[] = JSON.parse(settings.evolutionApiPhones);
   if (!phones.length) return;
 
   const { title, body } = buildMessage(send);
   const link = `${process.env.NEXTAUTH_URL ?? ""}/campaigns/${send.campaign.id}`;
-  const message = `⚠️ *${title}*\n\n${body}\n\n🔗 ${link}`;
-  const url = `https://api.z-api.io/instances/${settings.zApiInstanceId}/token/${settings.zApiToken}/send-text`;
+  const text = `⚠️ *${title}*\n\n${body}\n\n🔗 ${link}`;
+  const url = `${settings.evolutionApiUrl.replace(/\/$/, "")}/message/sendText/${settings.evolutionApiInstance}`;
 
   await Promise.allSettled(
-    phones.map((phone) =>
+    phones.map((number) =>
       fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, message }),
+        headers: {
+          "Content-Type": "application/json",
+          apikey: settings.evolutionApiKey!,
+        },
+        body: JSON.stringify({ number, text }),
       })
     )
   );
