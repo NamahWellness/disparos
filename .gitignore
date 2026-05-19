@@ -18,3 +18,4 @@ prisma/migrations/dev.db
 # Misc
 *.pem
 npm-debug.log*
+tsconfig.tsbuildinfo
